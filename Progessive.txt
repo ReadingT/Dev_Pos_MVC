@@ -1,0 +1,194 @@
+﻿///Path Get Value
+private void LoadDataList()
+        {
+            try
+            {
+                string unitName = "";
+                string reportcode = "R001";
+                string empCode = objSession.GetEmpCode();
+
+                string report_year = ddlYear.SelectedValue;
+                string param_1 = "";
+                string param_2 = "";
+                string param_3 = "Income";
+
+                //=====initail default value =====
+                string expression = "1=1 ";// objUtil.GetOwnerName_Expression();
+                string currentPage = "1";
+                string pageSize = "50";
+                string primarykey = default_primaryKey;
+                string orderBy = default_OrderField + default_Order;
+
+                //rptDataShow_List.DataSource = null;
+
+                if (objViewState.Expression != "") { param_1 += objViewState.Expression; }
+
+                DataSet ds = objExecute.Callab_Report_All(reportcode, empCode, unitName, report_year, param_1, param_2, param_3);
+                DataTable dt = ds.Tables[0];
+                if (ds != null && ds.Tables.Count > 0)
+                {
+                    
+                    string r1 = "";
+                    r1 += "<table style='width:100%'>";
+
+                    string h_1 = "";
+                    h_1 += "<tr><td class='bgGray text_center' colspan='10' style='font-size:18px'><strong>Calibration Center Income</strong></td></tr>" +
+                        "<tr class='text-center bgGray_2' style='font-weight:bold'>" +
+                        "<td class='textAlignVer' rowspan='13'>2018</td>" +
+                        "<td>Month</td>" +
+                        "<td>Internal</td>" +
+                        "<td>External</td>" +
+                        "<td>Accum External</td>" +
+                        "<td>Total Income</td>" +
+                        "<td>Accum Income</td>" +
+                        "<td>Accum Operating Expense</td>" +
+                        "<td>Accum Net Profit</td>" +
+                        "<td>Ex Income Target</td></tr>";
+
+                    string h_2 = "";
+                    Double In_Total = 0;
+                    Double Ex_Total = 0;
+
+                    Double SumEx = 0;
+                    Double SumIn = 0;
+                    Double SumTotal = 0;
+                    Double Cal = 0;
+                    //Chart 2 & 3
+                    string loop_A = "";
+                    string loop_B = "";
+                    string Get_A = "";
+                    string Get_B = "";
+                    string loop_C = "";
+                    string Get_C = "";
+                    if (dt != null && dt.Rows.Count > 0)
+                    {
+                        foreach (DataRow dr2 in dt.Rows)
+                        {
+                            string[] arrary = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+                            for (int j = 0; j < 12; j++)
+                            {
+                                h_2 += "<tr>";
+                                h_2 += string.Format("<td align='left'>{0}</td>", arrary[j]);
+                                string Inval = string.Format("Rout_{0}", j+1); string Exval = string.Format("New_{0}", j+1); string Totalval = string.Format("Exis_{0}", j + 1);
+                                string SetIn = string.Format(dr2["" + Inval + ""].ToString()); string SetEx = string.Format(dr2["" + Exval + ""].ToString());
+                                string SetTotal = string.Format(dr2["" + Totalval + ""].ToString());
+                                Double ChangeEx = Convert.ToDouble(String.Format("{0:n}", SetEx));
+                                Double ChangeIn = Convert.ToDouble(String.Format("{0:n}", SetTotal));
+                                SumEx = SumEx + ChangeEx;
+                                SumIn = SumIn + ChangeIn;
+                                Cal = SumIn + 0; //Operating Expense
+                                //Set Column
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(SetIn));
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(SetEx));
+                                h_2 += string.Format("<td class='Accum_External'>{0}</td>", objItem.SetMoneyFormat(SumEx));
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(SetTotal));
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(SumIn));
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", 0); //Operating Expense
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(Cal));
+                                h_2 += string.Format("<td class='tr_data_number'>{0}</td>", objItem.SetMoneyFormat(4600000));
+                                h_2 += "</tr>";
+
+                                if (j != 11) {
+                                    loop_A += string.Format("{0},", SetEx);
+                                    loop_B += string.Format("{0},", SumEx);
+                                    loop_C += string.Format("{0},", SetIn);
+                                }
+                                else if (j == 11) {
+                                    loop_A += string.Format("{0}", SetEx);
+                                    loop_B += string.Format("{0}", SumEx);
+                                    loop_C += string.Format("{0}", SetIn);
+                                }
+
+                            }
+                            In_Total = Convert.ToDouble(dr2["Sum_InCal"].ToString());
+                            Ex_Total = Convert.ToDouble(dr2["Sum_InRep"].ToString());
+                            SumTotal = Convert.ToDouble(dr2["Sum_Total"].ToString());
+                        }
+                    }
+                    //Chart 2 & 3
+                    Get_A = loop_A;
+                    Get_B = loop_B;
+                    Get_C = loop_C;
+
+                    Double In_Num = (In_Total * 100) / SumTotal;
+                    Double Ex_Num = (Ex_Total * 100) / SumTotal;
+                    float In_val = Convert.ToSingle((Math.Round(In_Num, 2)));
+                    float Ex_val = Convert.ToSingle((Math.Round(Ex_Num, 2)));
+
+                    //=== Show Chart 1 ===== 
+                    string scriptCalendarShow = string.Format(@"
+                    var In_val={0}; var Ex_val={1}; 
+                    Detail_Report3_Chart1(In_val, Ex_val);", In_val, Ex_val);
+
+                    //=== Show Chart 2 ===== 
+                    scriptCalendarShow += string.Format(@"
+                    var Chart_EX=[{0}]; var Chart_Accum=[{1}];
+                    Detail_Report3_Chart2(Chart_EX , Chart_Accum);", Get_A , Get_B);
+
+                    //=== Show Chart 3 ===== 
+                    scriptCalendarShow += string.Format(@"
+                    var Get_In=[{0}]; var Get_Ex=[{1}];
+                    Detail_Report3_Chart3(Get_In , Get_Ex);", Get_C , Get_A);
+
+                    scriptCalendarShow += "HideProgress();$('#MainContent_lblTotalPM').text(" + Ex_Num.ToString() + ");";
+                    ScriptManager.RegisterStartupScript(Page, Page.GetType(), "err_msg", scriptCalendarShow, true);
+
+                    string h_14 = "";
+                    h_14 += "<tr><td colspan='2'></td>" +
+                        "<td style='background-color:darksalmon; font-weight:bold' align='right'>"+ objItem.SetMoneyFormat(In_Total) + "</td>" +
+                        "<td style='background-color:darksalmon; font-weight:bold' align='right'>"+ objItem.SetMoneyFormat(Ex_Total) + "</td>" +
+                        "<td colspan='6'></td></tr>" +
+                        "<tr><td colspan='10' style='color:red' align='left'>&emsp;&emsp;&emsp;&emsp;<b><U>หมายเหตุ</U></b>: Target คำนวณจากข้อมูลเฉลี่ยย้อนหลัง 3 ปี(2015-2017) โดยคิดเฉพาะรายการปกติ ไม่รวมการเปลี่ยน Turbine เพื่อทดแทนของเดิมเมื่อปี 2016</td></tr>";
+
+                    //=== pack =========
+                    r1 += h_1;
+                    r1 += h_2;
+                    r1 += h_14;
+
+                    r1 += "</table>";
+                    zone_1.InnerHtml = r1;
+                }
+            }
+            catch (Exception ex)
+            {
+                objLog.writeLog(ex, this.GetType().FullName, new System.Diagnostics.StackFrame().GetMethod().ToString(), objSession.GetUserName(), Request.Path.ToString());
+
+            }
+
+////Prosedure Get Element
+public DataSet Callab_Report_All(string reportcode, string empCode, string unit_name, string report_year, string param_1, string param_2, string param_3)
+        {
+            DataSet ds = new DataSet();
+            try
+            {
+                openDB();
+
+                /*========== ==========*/
+                objCmd = objConn.CreateCommand();
+                objCmd.CommandText = "sp_cal_Report_All";
+                objCmd.CommandType = CommandType.StoredProcedure;
+
+                objCmd.Parameters.AddWithValue("reportcode", reportcode);
+                objCmd.Parameters.AddWithValue("empCode", empCode);
+
+                objCmd.Parameters.AddWithValue("unit_name", unit_name);
+                objCmd.Parameters.AddWithValue("report_year", report_year);
+                objCmd.Parameters.AddWithValue("param_1", param_1);
+                objCmd.Parameters.AddWithValue("param_2", param_2);
+                objCmd.Parameters.AddWithValue("param_3", param_3);
+
+                SqlDataAdapter dataAda = new SqlDataAdapter(objCmd);
+
+                dataAda.Fill(ds);
+                dataAda.Dispose();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                closeDB();
+            }
+            return ds;
+        }
