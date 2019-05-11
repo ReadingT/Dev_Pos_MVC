@@ -1,0 +1,281 @@
+﻿///Export Excel
+protected void btnExportExcel_Click(object sender, EventArgs e)
+        {
+            //=== export excel ===
+            //string prefixNameFile = "Sheet1";
+            string prefixNameFile = "CalibrationIncome_" + DateTime.Now.ToString(@"yyyyMMdd-HHMM");
+            HttpContext.Current.Response.Clear();
+            HttpContext.Current.Response.ClearContent();
+            HttpContext.Current.Response.ClearHeaders();
+            HttpContext.Current.Response.Buffer = true;
+            HttpContext.Current.Response.ContentType = "application/ms-excel";
+            //HttpContext.Current.Response.ContentType = "application/application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+            HttpContext.Current.Response.Write(@"<!DOCTYPE HTML PUBLIC ""-//W3C//DTD HTML 4.0 Transitional//EN""><meta charset='TIS-620' />");
+            HttpContext.Current.Response.AddHeader("Content-Disposition", "attachment;filename=" + prefixNameFile + ".xls");
+            //HttpContext.Current.Response.AppendHeader("content-disposition", "attachment; filename="+prefixNameFile+".xlsx");
+            HttpContext.Current.Response.Charset = "TIS-620";
+            HttpContext.Current.Response.ContentEncoding = System.Text.Encoding.GetEncoding("TIS-620");
+            HttpContext.Current.Response.Write(@"
+                    <style>
+       
+         table {
+            border: 1px solid #666;
+            border-collapse: collapse;
+            border-spacing: 0;
+            font-family: Tahoma;
+            font-size: 13px;
+            width: 100%;
+            line-height: 25px;
+            page-break-inside: auto;
+        }
+
+        table > tbody > tr > td {
+            border-top: 1px solid #666;
+            border-right: 1px solid #666;
+            border-left: 1px solid #666;
+            padding: 1px;
+        }
+
+        td {
+            border-top: 1px solid #666;
+            border-right: 1px solid #666;
+            border-left: 1px solid #666;
+            padding: 1px;
+        }
+
+        th {
+            border-top: 1px solid #666;
+            border-right: 1px solid #666;
+            border-left: 1px solid #666;
+            padding: 1px;
+        }
+
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        
+
+        table > tbody > tr:first-child > td {
+            border-top: 0;
+        }
+
+        table > tbody > tr > td:first-child {
+            border-left: 0;
+        }
+
+        table > tbody > tr > td:last-child {
+            border-right: 0;
+        }
+
+        .no-padding {
+            padding: 0 !important;
+        }
+
+        .bgGray {
+            background-color: #ddd;
+            font-weight: bold;
+        }
+
+        .bgGray_2 {
+            background-color: #ddd;
+        }
+
+        .greenyellow {
+            background-color: greenyellow;
+        }
+
+        .darksalmon {
+            background-color: darksalmon;
+            font-weight:bold;
+        }
+        
+        h5 {
+            margin: 5px 0;
+            font-family: Tahoma;
+            font-size: 16px;
+            font-weight: bold;
+            /*color:blue;*/
+        }
+
+        .text_center {
+            text-align: center;
+        }
+        
+        .tr_data_number {
+            text-align: right;
+        }
+        
+        .text_right {
+            text-align: right;
+        }
+
+        .Accum_External {
+             text-align : right;
+             background-color:limegreen;
+         }
+
+        .textAlignVer{
+            -webkit-transform: rotate(-90deg); 
+            -moz-transform: rotate(-90deg); 
+            transform: rotate(-90deg); 
+            font-weight:bold;
+        }
+
+        .no_border {
+            border: none;
+        }
+
+            .no_border td {
+                border: none;
+            }
+
+    </style>");
+
+            string ListdataAll = "";
+            ListdataAll = "<font style='font-size:10.0pt; font-family:Arial;'><BR><BR><BR>";
+            ListdataAll = GenForm();
+            ListdataAll += "</font>";
+
+            HttpContext.Current.Response.Write(ListdataAll);
+            HttpContext.Current.Response.Flush();
+            HttpContext.Current.Response.End();
+
+        }
+        private string GenForm()
+        {
+            string htmlAll = "";
+            htmlAll += zone_1.InnerHtml;
+            return htmlAll;
+        }
+
+///Export PDF
+public void btnPrint_Click(object sender, EventArgs e)
+        {
+            //=== Auto SAVE ====
+            if (btnSave.Visible)
+            {
+                btnSave_Click(btnPrint, null);
+            }
+
+            string headerID = hddHeaderID.Value;
+            string objectID = hddObjectID.Value;
+            string taskID = hddTransID.Value;
+            string runID = hddSubID.Value;
+            string formID = hddFormID.Value;
+            string empcode = hddEmpCode.Value;
+            string empname = hddEmpName.Value;
+            string p1 = "";
+            string p2 = "";
+            string p3 = "";
+            string pathSever = Server.MapPath("~");
+
+            ifix_print_form_all obj = new ifix_print_form_all();
+            var pdfBytes = obj.ExportDatatoPDF(headerID, objectID, taskID, runID, formID, empcode, empName, p1, p2, p3, pathSever);
+
+            int n = new Random().Next(1, 100);
+            string newfile = string.Format("{0}_{1}.pdf", DateTime.Now.ToString("mmddyyhhmmss"), n.ToString());
+            string fileName = string.Format("../upload/preview_form_2100/{0}", newfile);
+            string fileFullParth = Server.MapPath(fileName);
+            System.IO.File.WriteAllBytes(fileFullParth, pdfBytes);
+
+            Response.ContentType = "application/pdf";
+            Response.AppendHeader("Content-Disposition", "attachment; filename=" + newfile);
+            Response.TransmitFile(fileName);
+            Response.End();
+
+        }
+
+///Export Control PDF
+public byte[] ExportDatatoPDF(string headerID, string objectID, string taskID, string runID, string formID, string empCode, string empName, string p1, string p2, string p3, string serverPath)
+        {
+
+            string data=  GetData_Print(headerID,  objectID,  taskID,  runID,  formID,  empCode,  empName,  p1,  p2,  p3,  serverPath);
+            var htmlToPdf = new NReco.PdfGenerator.HtmlToPdfConverter();
+            var pdfBytes = htmlToPdf.GeneratePdf(data);
+
+            return pdfBytes;
+
+        }
+
+///Control Connection
+namespace cms_class_library
+{
+	public class clsDB : System.Web.UI.Page
+	{
+		public void openDB()
+        {
+            try
+            {
+
+                if (objConn != null && objConn.State == ConnectionState.Open)
+                {
+                    objConn.Close();
+                }
+                connectDB();
+             
+
+                if (objConn.State == ConnectionState.Closed)
+                {
+                    objConn.Open();
+                    //Trans = objConn.BeginTransaction(IsolationLevel.ReadCommitted);
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+                HttpContext.Current.Response.Redirect("../info/errorInfo.aspx?code=connect_db_fail&message=" + ex.Message.ToString());
+                
+            }
+
+        }
+	}
+}
+
+///Control Procedure
+public DataSet Callab_Report_All(string reportcode, string empCode, string unit_name, string report_year, string param_1, string param_2, string param_3)
+        {
+            DataSet ds = new DataSet();
+
+            try
+            {
+
+                openDB();
+
+                /*========== ==========*/
+                objCmd = objConn.CreateCommand();
+                objCmd.CommandText = "sp_cal_Report_All";
+                objCmd.CommandType = CommandType.StoredProcedure;
+
+                objCmd.Parameters.AddWithValue("reportcode", reportcode);
+                objCmd.Parameters.AddWithValue("empCode", empCode);
+
+                objCmd.Parameters.AddWithValue("unit_name", unit_name);
+                objCmd.Parameters.AddWithValue("report_year", report_year);
+                objCmd.Parameters.AddWithValue("param_1", param_1);
+                objCmd.Parameters.AddWithValue("param_2", param_2);
+                objCmd.Parameters.AddWithValue("param_3", param_3);
+
+                SqlDataAdapter dataAda = new SqlDataAdapter(objCmd);
+
+                dataAda.Fill(ds);
+                dataAda.Dispose();
+
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+
+                closeDB();
+
+            }
+            return ds;
+        }
+
+///Solution Performance
