@@ -1,0 +1,751 @@
+﻿///Update Item
+protected void btnSave_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                foreach (RepeaterItem ri in rpt_Function_list.Items)
+                {
+                    CheckBox chkIsAssFound = ri.FindControl("chkIsAssFound") as CheckBox; 
+                    HiddenField ListID = ri.FindControl("ListID") as HiddenField;
+                    string chkIsFound = "False";
+                    if (chkIsAssFound.Checked) { chkIsFound = "True"; };
+
+                    string sqlUpdate = string.Format("UPDATE Cal_2018_Cert_Function SET IsFound='{0}' WHERE ListID='{1}'", chkIsFound, ListID.Value);
+                    objExecute.ExecuteNonequery(sqlUpdate);
+                }
+                ShowMessageBox(objExecute.GetMessage("8"), false, true);
+            } 
+            catch (Exception ex)
+            {
+                objLog.writeLog(ex, this.GetType().FullName, new System.Diagnostics.StackFrame().GetMethod().ToString(), objSession.GetUserName(), Request.Path.ToString());
+                ShowMessageBox(ex.Message,true, false);
+            }
+        }
+
+
+///Genarede PDF
+public void btnPrint_Click(object sender, EventArgs e)
+        {
+            //=== Auto SAVE ====
+            if (btnSave.Visible)
+            {
+                btnSave_Click(btnPrint, null);
+            }
+
+            string headerID = hddHeaderID.Value;
+            string objectID = hddObjectID.Value;
+            string taskID = hddTransID.Value;
+            string runID = hddSubID.Value;
+            string formID = hddFormID.Value;
+            string empcode = hddEmpCode.Value;
+            string empname = hddEmpName.Value;
+            string p1 = "";
+            string p2 = "";
+            string p3 = "";
+            string pathSever = Server.MapPath("~");
+
+            ifix_print_form_all obj = new ifix_print_form_all();
+            var pdfBytes = obj.ExportDatatoPDF(headerID, objectID, taskID, runID, formID, empcode, empName, p1, p2, p3, pathSever);
+
+            int n = new Random().Next(1, 100);
+            string newfile = string.Format("{0}_{1}.pdf", DateTime.Now.ToString("mmddyyhhmmss"), n.ToString());
+            string fileName = string.Format("../upload/preview_form_2100/{0}", newfile);
+            string fileFullParth = Server.MapPath(fileName);
+            System.IO.File.WriteAllBytes(fileFullParth, pdfBytes);
+
+            Response.ContentType = "application/pdf";
+            Response.AppendHeader("Content-Disposition", "attachment; filename=" + newfile);
+            Response.TransmitFile(fileName);
+            Response.End();
+
+        }
+
+///Data to PDF
+public byte[] ExportDatatoPDF(string headerID, string objectID, string taskID, string runID, string formID, string empCode, string empName, string p1, string p2, string p3, string serverPath)
+        {
+
+            string data=  GetData_Print(headerID,  objectID,  taskID,  runID,  formID,  empCode,  empName,  p1,  p2,  p3,  serverPath);
+            var htmlToPdf = new NReco.PdfGenerator.HtmlToPdfConverter();
+            var pdfBytes = htmlToPdf.GeneratePdf(data);
+
+            return pdfBytes;
+
+        }
+
+///Get data print
+public string GetData_Print(string headerID, string objectID, string taskID, string runID, string formID,string empCode, string empName,string p1,string p2,string p3,string serverPath)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter stw = new StringWriter(sb);
+            HtmlTextWriter htextw = new HtmlTextWriter(stw); 
+            string data = "";
+
+            string filePathPrint = "../ifix_eform_print/4200.html";
+            string FORMCODE = "4200";
+            string isDeploy = "";
+            //=== Proterties of form ===
+            DataTable dtFrom = objExecute.ExecucteSql(string.Format("SELECT * FROM iFix_Mas_eForm WHERE FormID='{0}'",formID));
+            if(dtFrom!=null && dtFrom.Rows.Count>0)
+            {
+                filePathPrint = dtFrom.Rows[0]["PathPrint"].ToString();
+                FORMCODE = dtFrom.Rows[0]["FORMCODE"].ToString();
+                isDeploy = dtFrom.Rows[0]["IsDeploy"].ToString();
+            }
+
+            if(isDeploy=="True" && filePathPrint!="")
+            {
+              
+                string stepname = "GET_DATA";
+                //string headerID = hddHeaderID.Value;
+                //string objectID = hddObjectID.Value;
+                //string taskID = hddTransID.Value;
+                //string runID = hddSubID.Value; 
+
+                DataSet ds = objExecute.iFix_eForm_Split_Form(stepname, FORMCODE, headerID, objectID, taskID, runID, empCode, empName, p1, p2, p3);
+                if (ds != null && ds.Tables.Count > 0)
+                {
+
+                    DataTable dtH = ds.Tables[0];
+                    DataTable dtE = ds.Tables[1];
+                    DataTable dtM = ds.Tables[2];
+                    DataTable dtWF = ds.Tables[4];
+
+                    DataTable dtF = null;
+                    if (FORMCODE == "4200") { dtF = ds.Tables[5]; } else { dtF = ds.Tables[3]; }
+                    if (FORMCODE == "0103") { dtF = ds.Tables[5]; } else { dtF = ds.Tables[3]; }
+
+                    //== have answer form ===
+                    if (dtF != null && dtF.Rows.Count > 0)
+                    {
+
+                        string contentAll = System.IO.File.ReadAllText(HttpContext.Current.Server.MapPath(filePathPrint));
+                        htextw.WriteLine(contentAll);
+                        data = stw.ToString();
+                        
+
+                        //===== Header ==========
+                        if (dtH != null && dtH.Rows.Count > 0)
+                        {
+                            DataRow drHeader = dtH.Rows[0];
+                            data = data.Replace("{#WorkOrder}", drHeader["OrderNo"].ToString());
+                            data = data.Replace("{#UnitName}", drHeader["UnitName"].ToString());
+
+                            if (FORMCODE=="0101")
+                            {
+                                data = data.Replace("{#Location}", drHeader["FL_Name"].ToString());
+                                
+                                //string formDate = "";
+                                //if (dtM.Rows.Count>0) { formDate = objItem.SetDateFormat(dtM.Rows[0]["FormDate"].ToString());}
+                                //data = data.Replace("{#DateForm}", formDate);
+                            }
+                       
+
+
+                        }
+
+                        //=== Content in Form =============
+                        if (dtF != null && dtF.Rows.Count > 0)
+                        {
+                            data = Replace_DataForm(data, FORMCODE, formID, taskID, dtF, serverPath);
+                        }
+
+
+                        //==== footer ===============
+                        if (dtM != null && dtM.Rows.Count > 0)
+                        {
+                            DataRow dr = dtM.Rows[0];
+                            //if (FORMCODE == "4200")
+                            //{
+
+
+                            //    DataTable dtX = objExecute.ExecucteSql(string.Format(@"SELECT  * FROM  iFix_Question_Answer_Master WHERE TransID=(SELECT max(TransID) FROM iFix_Question_Answer_Master  a
+                            //                inner join iFix_SAP_WorkOrder_Object b on a.ObjectID_FK = b.ObjectID and b.HeaderID_FK = {0} and b.FormID_FK in(41, 61, 62))  ", headerID));
+                            //    if(dtX!=null && dtX.Rows.Count>0)
+                            //    {
+                            //        dr = dtX.Rows[0];
+                            //    }
+
+
+
+                            //}
+                            //else
+                            //{
+                            //    dr = dtM.Rows[0];
+                            //}
+                            
+                            dr = dtM.Rows[0];
+
+                            //== Set Technician Form Footer ==
+                            string Tech_name = dr["CreatedBy"].ToString();
+                            
+                            data = data.Replace("{#tech_name}", Tech_name);
+                            data = data.Replace("{#tech_date}", objItem.SetDateFormat(dr["CreatedDate"].ToString()));
+                            
+                            string Tech_Code = "";
+
+                            DataTable Get_EmpCode = objExecute.ExecucteSql(string.Format("select EmpCode from Mas_Employee where EmployeeName_2 like '{0}'", Tech_name));
+                            if (Get_EmpCode != null && Get_EmpCode.Rows.Count > 0)
+                            {
+                                Tech_Code = Get_EmpCode.Rows[0]["EmpCode"].ToString();
+                            }
+                            string path_Tech = "";
+                            if (SignatureIsExists("upload/profile/" + Tech_Code + ".png", out path_Tech))
+                            {
+                                data = data.Replace("{#tech_sign}", string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + Tech_Code + ".png"));
+                                data = data.Replace("{#TestedBy}", Tech_name + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + Tech_Code + ".png"));
+                            }
+                            else
+                            {
+                                data = data.Replace("{#tech_sign}", string.Format("", serverPath + "upload/profile/" + Tech_Code + ".png"));
+                                data = data.Replace("{#TestedBy}", Tech_name + "<br/>" + string.Format("", serverPath + "upload/profile/" + Tech_Code + ".png"));
+                            }
+
+                            //=== Witness ==
+                            if (formID == "16")
+                            {
+                                string ListAllWithNess = "";
+                                if (dr["Name_1"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #1</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_1"].ToString(), dr["COM_1"].ToString());
+                                    string path = dr["SIGN_1"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img class='sign'  src=\"{0}\"></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_1"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_2"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #2</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_2"].ToString(), dr["COM_2"].ToString());
+                                    string path = dr["SIGN_2"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_2"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+                                if (dr["Name_3"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #3</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_3"].ToString(), dr["COM_3"].ToString());
+                                    string path = dr["SIGN_3"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_3"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_4"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #4</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_4"].ToString(), dr["COM_4"].ToString());
+                                    string path = dr["SIGN_4"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_4"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                data = data.Replace("{#List_Witnessed}", ListAllWithNess);
+                            }
+                            else if (formID == "15")
+                            {
+                                string ListAllWithNess = "";
+                                if (dr["Name_1"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #1</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_1"].ToString(), dr["COM_1"].ToString());
+                                    string path = dr["SIGN_1"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img class='sign'  src=\"{0}\"></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_1"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_2"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #2</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_2"].ToString(), dr["COM_2"].ToString());
+                                    string path = dr["SIGN_2"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_2"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+                                if (dr["Name_3"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #3</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_3"].ToString(), dr["COM_3"].ToString());
+                                    string path = dr["SIGN_3"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_3"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_4"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #4</td>";
+                                    ListAllWithNess += string.Format("<td>{0}<br>{1}</td>", dr["NAME_4"].ToString(), dr["COM_4"].ToString());
+                                    string path = dr["SIGN_4"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_4"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                data = data.Replace("{#List_Witnessed}", ListAllWithNess);
+                            }
+                            else
+                            {
+                                string ListAllWithNess = "";
+                                if (dr["Name_1"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #1</td>";
+                                    ListAllWithNess += string.Format("<td>{0}&emsp;{1}</td>", dr["NAME_1"].ToString(), dr["COM_1"].ToString());
+                                    string path = dr["SIGN_1"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img class='sign'  src=\"{0}\"></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_1"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_1"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_2"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #2</td>";
+                                    ListAllWithNess += string.Format("<td>{0}&emsp;{1}</td>", dr["NAME_2"].ToString(), dr["COM_2"].ToString());
+                                    string path = dr["SIGN_2"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_2"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_2"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+                                if (dr["Name_3"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #3</td>";
+                                    ListAllWithNess += string.Format("<td>{0}&emsp;{1}</td>", dr["NAME_3"].ToString(), dr["COM_3"].ToString());
+                                    string path = dr["SIGN_3"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_3"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_3"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                if (dr["Name_4"].ToString() != "")
+                                {
+                                    ListAllWithNess += "<tr style='page-break-inside:avoid; page-break-after:auto'>";
+                                    ListAllWithNess += "<td>Witnessed #4</td>";
+                                    ListAllWithNess += string.Format("<td>{0}&emsp;{1}</td>", dr["NAME_4"].ToString(), dr["COM_4"].ToString());
+                                    string path = dr["SIGN_4"].ToString();
+                                    if (path != "")
+                                    {
+                                        ListAllWithNess += string.Format("<td><img src=\"{0}\" class='sign'></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    else
+                                    {
+                                        ListAllWithNess += string.Format("<td></td>", dr["SIGN_4"].ToString());
+                                    }
+                                    ListAllWithNess += string.Format("<td>{0}</td>", objItem.SetDateFormat(dr["DATE_4"].ToString()));
+
+                                    ListAllWithNess += "</tr>";
+                                }
+
+                                data = data.Replace("{#List_Witnessed}", ListAllWithNess);
+                            }
+
+                        }
+
+                        if (dtWF != null && dtWF.Rows.Count > 0)
+                        {
+                            foreach (DataRow dr in dtWF.Rows)
+                            {
+                                if (dr["StepID_FK"].ToString() == "2")
+                                {
+                                    //data = data.Replace("{#tech_name}", dr["WF_EmployeeName"].ToString());
+                                    //data = data.Replace("{#tech_date}", objItem.SetDateFormat(dr["DateAction"].ToString()));
+                                    //string path = "";
+                                    //if (SignatureIsExists("upload/profile/" + dr["WF_EmpCode"].ToString() + ".png", out path))
+                                    //{
+                                    //    data = data.Replace("{#tech_sign}", string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    //    data = data.Replace("{#TestedBy}", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    //}
+                                    //else
+                                    //{
+                                    //    data = data.Replace("{#tech_sign}", string.Format("", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    //    data = data.Replace("{#TestedBy}", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    //}
+                                }
+
+
+                                if (dr["StepID_FK"].ToString() == "3")
+                                {
+                                    data = data.Replace("{#planner_name}", dr["WF_EmployeeName"].ToString());
+                                    data = data.Replace("{#planner_date}", objItem.SetDateFormat(dr["DateAction"].ToString()));
+                                    string path = "";
+                                    if (SignatureIsExists("upload/profile/" + dr["WF_EmpCode"].ToString() + ".png", out path))
+                                    { 
+                                        data = data.Replace("{#planner_sign}", string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                        data = data.Replace("{#AcceptedBy}", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    }
+                                    else
+                                    {
+                                        data = data.Replace("{#planner_sign}", string.Format("", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                        data = data.Replace("{#AcceptedBy}", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("", serverPath + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                                    }
+
+                                }
+
+
+                            }
+                        }
+
+
+                        //Landscape 
+                        //htmlToPdf.Orientation = NReco.PdfGenerator.PageOrientation.Landscape; 
+
+                        //=== footer ===
+                        if (dtE!=null && dtE.Rows.Count>0)
+                        {
+                            string footer_form = dtE.Rows[0]["footer_form"].ToString();
+                            data = data.Replace("{#footer_form}", footer_form);
+                        }
+
+                        //== File Upload ======
+                        //   data = data.Replace("src=\"../upload/", "src=\"" + Server.MapPath("~") + "/upload/");
+                        data = data.Replace("src=\"../upload/", "src=\"" + serverPath + "/upload/");
+
+
+                        //==== Logo =====
+                        // string newPath = Server.MapPath("~") + "ifix_eform_print\\logo.png";
+                        string newPath = serverPath + "ifix_eform_print\\logo.png";
+
+                        data = data.Replace("logo.png", newPath);
+
+                        //var htmlToPdf = new NReco.PdfGenerator.HtmlToPdfConverter();
+                        //var pdfBytes = htmlToPdf.GeneratePdf(data);
+
+                    }
+
+
+                }
+
+                 
+            }
+
+
+            return data;
+
+        }
+
+
+///ExecuteSQL
+public DataTable ExecucteSql(string sql)
+        {
+            DataTable dt = new DataTable();
+            try
+            {
+                openDB();
+                SqlDataAdapter dataAda = new SqlDataAdapter(sql, objConn);
+                DataSet ds = new DataSet();
+                dataAda.Fill(ds);
+                if (ds != null && ds.Tables.Count > 0)
+                {dt = ds.Tables[0];}
+                dataAda.Dispose();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                closeDB();
+            }
+
+            return dt;
+
+
+        }
+
+
+///Replace_DataForm
+public string Replace_DataForm(string data,string formCode,string formID, string taskID, DataTable dtF,string serverPath)
+        {
+            DataRow dr = dtF.Rows[0];
+            data = data.Replace("{#FormDate}", objItem.SetDateFormat(dr["FormDate"].ToString()));
+            //data = data.Replace("{#Workpermit}", dr["WorkPermit"].ToString());
+            data = data.Replace("{#SiteCus}", dr["CusName"].ToString());
+            
+            if (formCode=="4200")
+            {
+                string listPCV = "";
+                string listPSV = "";
+                string listSSV = "";
+
+                string listComment_all = "";
+                string result = "";
+                string row_content = "";
+                string unitCal = "";
+                foreach (DataRow dr2 in dtF.Rows)
+                {
+                    row_content = "";
+                    result = dr2["Result"].ToString() == "True" ? "Pass" : "Fail";
+                    row_content += "<tr>";
+                    row_content += string.Format("<td>{0}</td>", dr2["TagNo"].ToString());
+                    row_content += string.Format("<td>{0}</td>", dr2["Setpoint_1"].ToString());
+                    row_content += string.Format("<td>{0}</td>", dr2["Input_1"].ToString());
+                    row_content += string.Format("<td>{0}</td>", dr2["Error_1"].ToString());
+
+                    if (dr2["IsHaveAsLeft"].ToString() == "True")
+                    {
+                        row_content += string.Format("<td>{0}</td>", dr2["Input_2"].ToString());
+                        row_content += string.Format("<td>{0}</td>", dr2["Error_2"].ToString());
+
+                    }
+                    else
+                    {
+                        row_content += string.Format("<td>{0}</td>", "-");
+                        row_content += string.Format("<td>{0}</td>", "-");
+                    }
+
+                    if (dr2["TagGroup"].ToString() == "PCV")
+                    {
+                        row_content += string.Format("<td>{0}</td>", dr2["LockPressure"].ToString());
+                    }
+                   
+
+
+                    row_content += string.Format("<td>{0}</td>", result);
+                    row_content += "</tr>";
+
+                    listComment_all += "<br>-" + dr2["Comment"].ToString();
+
+
+                    if (dr2["TagGroup"].ToString() == "PCV")
+                    {
+
+                        listPCV += row_content;
+                    }
+
+                    if (dr2["TagGroup"].ToString() == "SSV")
+                    {
+                        listSSV += row_content;
+                    }
+                    if (dr2["TagGroup"].ToString() == "PSV")
+                    {
+                        listPSV += row_content;
+                    }
+
+                    unitCal = dr2["Unit"].ToString();
+
+                }
+
+
+                data = data.Replace("{#List_PCV}", listPCV);
+                data = data.Replace("{#List_SSV}", listSSV);
+                data = data.Replace("{#List_PSV}", listPSV);
+
+
+                data = data.Replace("{#Comment_List}", listComment_all);
+
+
+                //== last row ==
+                data = data.Replace("{#Unit}", unitCal);
+            }
+            if (formCode == "0103")
+            {
+                string RowItem_Tagno = "";
+                string GetItem_Detail = "";
+
+                string ReferItem_Tagno = "";
+                string GetRefer_Detail = "";
+                foreach (DataRow dr2 in dtF.Rows)
+                {
+                    if (dr2["TransID_FK"].ToString() == taskID)
+                    {
+                        data = data.Replace("{#DataCall}", objItem.SetDateFormat(dr2["FormDate"].ToString()));
+                    }
+
+                    //Table Tagno
+                    RowItem_Tagno = "";
+                    RowItem_Tagno += "<div style='padding:5px'></div>";
+                    RowItem_Tagno += "<table style='width:100%' class='no_border'>";
+                    RowItem_Tagno += "<tr class='no_border'>";
+                    RowItem_Tagno += "<td width='10%'>Tag No. :</td>";
+                    RowItem_Tagno += string.Format("<td width='20%'><span class='dein'>{0}</span></td>", dr2["TagNo"].ToString());
+                    RowItem_Tagno += "<td width='10%'>Range :</td>";
+                    RowItem_Tagno += string.Format("<td width='20%'><span class='dein'>{0} - {1} {2}</span></td>", dr2["txtMin"].ToString() , dr2["txtRange"].ToString() , dr2["txtUnit"].ToString());
+                    RowItem_Tagno += "<td width='10%'>Type :</td>";
+                    if (dr2["Cb_PGauge"].ToString() == "True") { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;P. Gauge</td>", "checked='checked'"); }
+                    else { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;P. Gauge</td>", ""); }
+                    if (dr2["Cb_TGauge"].ToString() == "True") { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;T. Gauge</td>", "checked='checked'"); }
+                    else { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;T. Gauge</td>", ""); }
+                    if (dr2["Cb_PDIGauge"].ToString() == "True") { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;PDI.Gauge</td>", "checked='checked'"); }
+                    else { RowItem_Tagno += string.Format("<td width='10%'><input type='checkbox' {0} />&nbsp;PDI.Gauge</td>", ""); }
+                    RowItem_Tagno += "</tr>";
+                    //Detail Tagno
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td colspan='8'>";
+                    RowItem_Tagno += "<table class='coninde'>";
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td width='20%' rowspan='2' class='bgGray'>Norminal</td>";
+                    RowItem_Tagno += "<td colspan='3' class='bgGray'>As found</td>";
+                    RowItem_Tagno += "<td colspan='3' class='bgGray'>As left</td>";
+                    RowItem_Tagno += "<td width='10%' rowspan='2' class='bgGray'>Results**</td>";
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td width='10%' class='bgGray'>Ref. Reading</td>";
+                    RowItem_Tagno += "<td width='10%' class='bgGray'>Gauge Reading</td>";
+                    RowItem_Tagno += "<td width='5%' class='bgGray'>%Error</td>";
+                    RowItem_Tagno += "<td width='10%' class='bgGray'>Ref. Reading</td>";
+                    RowItem_Tagno += "<td width='10%' class='bgGray'>Gauge Reading</td>";
+                    RowItem_Tagno += "<td width='5%' class='bgGray'>%Error</td>";
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td>Operating Point*</td>";
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound1_1"].ToString() == "" ? "-" : dr2["txtAsfound1_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound1_2"].ToString() == "" ? "-" : dr2["txtAsfound1_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound1_3"].ToString() == "" ? "-" : dr2["txtAsfound1_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft1_1"].ToString() == "" ? "-" : dr2["txtAsleft1_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft1_2"].ToString() == "" ? "-" : dr2["txtAsleft1_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft1_3"].ToString() == "" ? "-" : dr2["txtAsleft1_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtStatus1"].ToString() == "" ? "-" : dr2["txtStatus1"].ToString());
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td>Zero Check</td>";
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound2_1"].ToString() == "" ? "-" : dr2["txtAsfound2_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound2_2"].ToString() == "" ? "-" : dr2["txtAsfound2_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound2_3"].ToString() == "" ? "-" : dr2["txtAsfound2_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft2_1"].ToString() == "" ? "-" : dr2["txtAsleft2_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft2_2"].ToString() == "" ? "-" : dr2["txtAsleft2_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft2_3"].ToString() == "" ? "-" : dr2["txtAsleft2_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtStatus2"].ToString() == "" ? "-" : dr2["txtStatus2"].ToString());
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "<tr>";
+                    RowItem_Tagno += "<td>Operating Point*</td>";
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound3_1"].ToString() == "" ? "-" : dr2["txtAsfound3_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound3_2"].ToString() == "" ? "-" : dr2["txtAsfound3_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsfound3_3"].ToString() == "" ? "-" : dr2["txtAsfound3_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft3_1"].ToString() == "" ? "-" : dr2["txtAsleft3_1"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft3_2"].ToString() == "" ? "-" : dr2["txtAsleft3_2"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtAsleft3_3"].ToString() == "" ? "-" : dr2["txtAsleft3_3"].ToString());
+                    RowItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtStatus3"].ToString() == "" ? "-" : dr2["txtStatus3"].ToString());
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "</table>";
+
+                    RowItem_Tagno += "</td>";
+                    RowItem_Tagno += "</tr>";
+                    RowItem_Tagno += "</table>";
+
+                    RowItem_Tagno += "<div style='padding:5px'></div>";
+                    RowItem_Tagno += string.Format("<u><b>Remark</b></u>&nbsp;&nbsp;<span class='dein'>{0}</span>", dr2["txtRemarkResult"].ToString() == "" ? "-" : dr2["txtRemarkResult"].ToString());
+                    RowItem_Tagno += "<div style='padding:5px'></div>";
+
+                    GetItem_Detail += RowItem_Tagno;
+
+                    //Get Item Reference
+                    ReferItem_Tagno = "";
+                    ReferItem_Tagno += "<tr>";
+                    ReferItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtEquipTest"].ToString() == "" ? "-" : dr2["txtEquipTest"].ToString());
+                    ReferItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtTest_Manufac"].ToString() == "" ? "-" : dr2["txtTest_Manufac"].ToString());
+                    ReferItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtTest_model"].ToString() == "" ? "-" : dr2["txtTest_model"].ToString());
+                    ReferItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", dr2["txtTest_SerailNo"].ToString() == "" ? "-" : dr2["txtTest_SerailNo"].ToString());
+                    ReferItem_Tagno += string.Format("<td><span class='dein'>{0}</span></td>", objItem.SetDateFormat(dr2["date_End"].ToString()) == "" ? "-" : objItem.SetDateFormat(dr2["date_End"].ToString()));
+                    ReferItem_Tagno += "</tr>";
+
+                    GetRefer_Detail += ReferItem_Tagno;
+                }
+                data = data.Replace("{#ListItem_Tagno}", GetItem_Detail);
+                data = data.Replace("{#ListItem_Refer}", GetRefer_Detail);
+            }
+
+            return data;
+        }
