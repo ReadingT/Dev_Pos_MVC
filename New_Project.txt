@@ -1,0 +1,7 @@
+﻿preliminary analysis / การวิเคราะห์เบื้องต้น
+system analysis / การวิเคราะห์ระบบ
+system design / การออกแบบระบบ
+programing / การเขียนโปรแกรม
+testing / การทดสอบ
+implementation / การดำเนินงาน
+maintenance / ซ่อมบำรุง
