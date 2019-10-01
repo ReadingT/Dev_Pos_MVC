@@ -1,0 +1,58 @@
+public void DeleteFile(string strPathFile)
+        {
+            //== delete old file
+            if (File.Exists(strPathFile))
+            {
+
+                File.Delete(strPathFile);
+            }
+        }
+
+        public void MoveFile(string pathFileSource, string pathFileDestination)
+        {
+            try
+            {
+                if (File.Exists(pathFileSource))
+                {
+
+                    File.Move(pathFileSource, pathFileDestination);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+
+            }
+
+
+        }
+     
+        public string GetFolder_Code(string RequestCodeUse)
+        {
+            string folderCode = RequestCodeUse.Replace("/", "");         
+            return folderCode;
+        }
+        public void CreateFolder(string folderNamePath)
+        {
+            if (!CheckExistFile(folderNamePath))
+            {
+                //=== Create Folder ====//
+                Directory.CreateDirectory(Server.MapPath(folderNamePath));
+
+            }
+
+        }
+
+        public bool CheckExistFile(string pahtName)
+        {
+            if (File.Exists(Server.MapPath(pahtName)))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+
+
+        }
