@@ -1,0 +1,346 @@
+public void btnPrint_Click(object sender, EventArgs e)
+        {
+            StringBuilder sb = new StringBuilder();
+            StringWriter stw = new StringWriter(sb);
+            HtmlTextWriter htextw = new HtmlTextWriter(stw);
+
+            string formID = hddFormID.Value;
+            string contentAll = System.IO.File.ReadAllText(HttpContext.Current.Server.MapPath(filePathPrint));
+            htextw.WriteLine(contentAll);
+            string data = stw.ToString();
+
+
+
+            string stepname = "GET_DATA";
+            string headerID = hddHeaderID.Value;
+            string objectID = hddObjectID.Value;
+            string taskID = hddTransID.Value;
+            string runID = hddSubID.Value;
+
+            string p1 = "";
+            string p2 = "";
+            string p3 = "";
+
+            Dictionary<string, string> value = new Dictionary<string, string>();
+            DataSet ds = objExecute.iFix_eForm_Split_Form(stepname, "4201", headerID, objectID, taskID, runID, empCode, empName, p1, p2, p3);
+            if (ds != null && ds.Tables.Count > 0)
+            {
+                DataTable dtH = ds.Tables[0];
+                DataTable dtE = ds.Tables[1];
+                DataTable dtM = ds.Tables[2];
+                DataTable dtF = ds.Tables[3];
+                DataTable dtWF = ds.Tables[4];
+
+                if (dtF != null && dtF.Rows.Count > 0)
+                {
+                    //===== Header ==========
+                    if (dtH != null && dtH.Rows.Count > 0)
+                    {
+                        DataRow drHeader = dtH.Rows[0];
+                        //value.Add("WorkOrder", drHeader["OrderNo"].ToString());
+                        value.Add("UnitName", drHeader["UnitName"].ToString());
+
+
+                    }
+
+                    if (dtF != null && dtF.Rows.Count > 0)
+                    {
+                        DataRow dr = dtF.Rows[0];
+                        value.Add("Manufac", dr["Manufacturer"].ToString());
+                        value.Add("SiteCus", dr["CusName"].ToString());
+                        value.Add("Model", dr["Model"].ToString());
+                        value.Add("SN", dr["SN"].ToString());
+
+                        value.Add("DateCall", objDateFormat.DateDisplay(dr["FormDate"].ToString()));
+                        value.Add("TagNo", dr["TagNo"].ToString());
+
+
+                        if (dr["Is1Pass"].ToString() == "True")
+                        {
+                            value.Add("is1pass", "checked");
+                            value.Add("is1fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is1pass", "");
+                            value.Add("is1fail", "checked");
+                        }
+                        if (dr["Is2Pass"].ToString() == "True")
+                        {
+                            value.Add("is2pass", "checked");
+                            value.Add("is2fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is2pass", "");
+                            value.Add("is2fail", "checked");
+                        }
+                        if (dr["Is3Pass"].ToString() == "True")
+                        {
+                            value.Add("is3pass", "checked");
+                            value.Add("is3fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is3pass", "");
+                            value.Add("is3fail", "checked");
+                        }
+                        if (dr["Is4Pass"].ToString() == "True")
+                        {
+                            value.Add("is4pass", "checked");
+                            value.Add("is4fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is4pass", "");
+                            value.Add("is4fail", "checked");
+                        }
+                        if (dr["Is5Pass"].ToString() == "True")
+                        {
+                            value.Add("is5pass", "checked");
+                            value.Add("is5fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is5pass", "");
+                            value.Add("is5fail", "checked");
+                        }
+                        value.Add("Fix", dr["Fix"].ToString());
+                        
+
+                        //=== Table List ====
+                        value.Add("ControlAccuracy", objItem.SetMoneyFormat_3Dit(dr["ControlAccuracy"].ToString()));
+
+                        value.Add("BeforePer1", objItem.SetMoneyFormat_3Dit(dr["BeforePer1"].ToString()));
+                        value.Add("BeforeError1", objItem.SetMoneyFormat_3Dit(dr["BeforeError1"].ToString()));
+                       
+
+                        value.Add("BeforePer2", objItem.SetMoneyFormat_3Dit(dr["BeforePer2"].ToString()));
+                        value.Add("BeforeError2", objItem.SetMoneyFormat_3Dit(dr["BeforeError2"].ToString()));
+                        
+
+                        value.Add("BeforePer3", objItem.SetMoneyFormat_3Dit(dr["BeforePer3"].ToString()));
+                        value.Add("BeforeError3", objItem.SetMoneyFormat_3Dit(dr["BeforeError3"].ToString()));
+
+                        value.Add("BeforePer4", objItem.SetMoneyFormat_3Dit(dr["BeforePer4"].ToString()));
+                        value.Add("BeforeError4", objItem.SetMoneyFormat_3Dit(dr["BeforeError4"].ToString()));
+
+                        value.Add("BeforePer5", objItem.SetMoneyFormat_3Dit(dr["BeforePer5"].ToString()));
+                        value.Add("BeforeError5", objItem.SetMoneyFormat_3Dit(dr["BeforeError5"].ToString()));
+
+                        value.Add("BeforePer6", objItem.SetMoneyFormat_3Dit(dr["BeforePer6"].ToString()));
+                        value.Add("BeforeError6", objItem.SetMoneyFormat_3Dit(dr["BeforeError6"].ToString()));
+
+                        value.Add("BeforePer7", objItem.SetMoneyFormat_3Dit(dr["BeforePer7"].ToString()));
+                        value.Add("BeforeError7", objItem.SetMoneyFormat_3Dit(dr["BeforeError7"].ToString()));
+
+                        value.Add("BeforePer8", objItem.SetMoneyFormat_3Dit(dr["BeforePer8"].ToString()));
+                        value.Add("BeforeError8", objItem.SetMoneyFormat_3Dit(dr["BeforeError8"].ToString()));
+
+                        value.Add("BeforePer9", objItem.SetMoneyFormat_3Dit(dr["BeforePer9"].ToString()));
+                        value.Add("BeforeError9", objItem.SetMoneyFormat_3Dit(dr["BeforeError9"].ToString()));
+
+                        if (dr["IsControlAfter"].ToString() == "True")
+                        {
+                            value.Add("AfterPer1", objItem.SetMoneyFormat_3Dit(dr["AfterPer1"].ToString()));
+                            value.Add("AfterError1", objItem.SetMoneyFormat_3Dit(dr["AfterError1"].ToString()));
+                            value.Add("AfterPer2", objItem.SetMoneyFormat_3Dit(dr["AfterPer2"].ToString()));
+                            value.Add("AfterError2", objItem.SetMoneyFormat_3Dit(dr["AfterError2"].ToString()));
+                            value.Add("AfterPer3", objItem.SetMoneyFormat_3Dit(dr["AfterPer3"].ToString()));
+                            value.Add("AfterError3", objItem.SetMoneyFormat_3Dit(dr["AfterError3"].ToString()));
+                            value.Add("AfterPer4", objItem.SetMoneyFormat_3Dit(dr["AfterPer4"].ToString()));
+                            value.Add("AfterError4", objItem.SetMoneyFormat_3Dit(dr["AfterError4"].ToString()));
+                            value.Add("AfterPer5", objItem.SetMoneyFormat_3Dit(dr["AfterPer5"].ToString()));
+                            value.Add("AfterError5", objItem.SetMoneyFormat_3Dit(dr["AfterError5"].ToString()));
+                            value.Add("AfterPer6", objItem.SetMoneyFormat_3Dit(dr["AfterPer6"].ToString()));
+                            value.Add("AfterError6", objItem.SetMoneyFormat_3Dit(dr["AfterError6"].ToString()));
+                            value.Add("AfterPer7", objItem.SetMoneyFormat_3Dit(dr["AfterPer7"].ToString()));
+                            value.Add("AfterError7", objItem.SetMoneyFormat_3Dit(dr["AfterError7"].ToString()));
+                            value.Add("AfterPer8", objItem.SetMoneyFormat_3Dit(dr["AfterPer8"].ToString()));
+                            value.Add("AfterError8", objItem.SetMoneyFormat_3Dit(dr["AfterError8"].ToString()));
+                            value.Add("AfterPer9", objItem.SetMoneyFormat_3Dit(dr["AfterPer9"].ToString()));
+                            value.Add("AfterError9", objItem.SetMoneyFormat_3Dit(dr["AfterError9"].ToString()));
+
+                        }
+                        else
+                        {
+                            value.Add("AfterPer1", "-");
+                            value.Add("AfterError1", "-");
+                            value.Add("AfterPer2", "-");
+                            value.Add("AfterError2", "-");
+                            value.Add("AfterPer3", "-");
+                            value.Add("AfterError3", "-");
+                            value.Add("AfterPer4", "-");
+                            value.Add("AfterError4", "-");
+                            value.Add("AfterPer5", "-");
+                            value.Add("AfterError5", "-");
+                            value.Add("AfterPer6", "-");
+                            value.Add("AfterError6", "-");
+                            value.Add("AfterPer7", "-");
+                            value.Add("AfterError7", "-");
+                            value.Add("AfterPer8", "-");
+                            value.Add("AfterError8", "-");
+                            value.Add("AfterPer9", "-");
+                            value.Add("AfterError9", "-");
+                        }
+
+                        if (dr["IsShutdown"].ToString() == "True")
+                        {
+                            value.Add("isshutdown", "checked");
+                            value.Add("isnoshutdown", "");
+                        }
+                        else
+                        {
+                            value.Add("isshutdown", "");
+                            value.Add("isnoshutdown", "checked");
+                        }
+                        if (dr["Is71Pass"].ToString() == "True")
+                        {
+                            value.Add("is71pass", "checked");
+                            value.Add("is71fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is71pass", "");
+                            value.Add("is71fail", "checked");
+                        }
+                        if (dr["Is72Pass"].ToString() == "True")
+                        {
+                            value.Add("is72pass", "checked");
+                            value.Add("is72fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is72pass", "");
+                            value.Add("is72fail", "checked");
+                        }
+                        if (dr["Is73Pass"].ToString() == "True")
+                        {
+                            value.Add("is73pass", "checked");
+                            value.Add("is73fail", "");
+                        }
+                        else
+                        {
+                            value.Add("is73pass", "");
+                            value.Add("is73fail", "checked");
+                        }
+
+                    }
+
+
+
+                }
+                if (dtWF != null && dtWF.Rows.Count > 0)
+                {
+                    foreach (DataRow dr in dtWF.Rows)
+                    {
+                        if (dr["StepID_FK"].ToString() == "2")
+                        {
+                            string path = "";
+                            if (SignatureIsExists("upload/profile/" + dr["WF_EmpCode"].ToString() + ".png", out path))
+                            {
+                                value.Add("TestedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", path));
+
+                            }
+                            else
+                            {
+                                value.Add("TestedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("", path));
+                            }
+                            //value.Add("TestedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", Server.MapPath("~") + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                        }
+
+
+                        if (dr["StepID_FK"].ToString() == "3")
+                        {
+                            string path = "";
+                            if (SignatureIsExists("upload/profile/" + dr["WF_EmpCode"].ToString() + ".png", out path))
+                            {
+                                value.Add("AcceptedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", path));
+
+                            }
+                            else
+                            {
+                                value.Add("AcceptedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("", path));
+                            }
+                            //value.Add("AcceptedBy", dr["WF_EmployeeName"].ToString() + "<br/>" + string.Format("<img class='sign' src=\"{0}\">", Server.MapPath("~") + "upload/profile/" + dr["WF_EmpCode"].ToString() + ".png"));
+                        }
+                    }
+                }
+
+
+            }
+            data = Supplant(data, value);
+
+            var htmlToPdf = new NReco.PdfGenerator.HtmlToPdfConverter();
+            var margins = new NReco.PdfGenerator.PageMargins();
+
+            margins.Top = 15;
+            margins.Bottom = 18;
+            margins.Left = 10;
+            margins.Right = 10;
+
+            htmlToPdf.Margins = margins;
+
+            htmlToPdf.PageFooterHtml = "ML2-4201 รอ.วรต.";
+
+            //==== Logo ===
+            string newPath = Server.MapPath("~") + "ifix_eform_print\\logo.png";
+            var pdfBytes = htmlToPdf.GeneratePdf(data.Replace("logo.png", newPath));
+
+
+
+
+            HttpContext.Current.Response.Clear();
+            HttpContext.Current.Response.Charset = "utf-8";
+            HttpContext.Current.Response.ContentEncoding = System.Text.Encoding.UTF8;
+            HttpContext.Current.Response.AddHeader("content-disposition", "attachment;filename=" + HttpUtility.UrlEncode("ifix_" + txtWorkOrder.Text + ".pdf", System.Text.Encoding.UTF8));
+            HttpContext.Current.Response.ContentType = "application/pdf";
+            HttpContext.Current.Response.BinaryWrite(pdfBytes);
+            HttpContext.Current.Response.Flush();
+            HttpContext.Current.Response.End();
+        }
+        public string Supplant(string data, Dictionary<string, string> value)
+        {
+            Regex re = new Regex(@"\{#([^{}]*)\}");
+            return re.Replace(data, delegate(Match match)
+            {
+                string key = match.Groups[1].Value;
+                if (value.ContainsKey(key))
+                    return value[key];
+                return "";
+            });
+        }
+        private bool SignatureIsExists(string sign, out string path)
+        {
+            path = Server.MapPath("~") + sign;
+            if (File.Exists(path))
+            {
+                return true;
+            }
+            return false;
+        }
+
+
+
+///
+
+rdoIs1Pass.Checked = dr["Is1Pass"].ToString() == "True" ? true : false;
+
+///
+
+<div class="col-md-8">
+                        <uc1:ucCalendar runat="server" ID="ucCalendarForm" />
+                    </div>
+
+///
+ucCalendarForm.SetValueCurrent();
+///
+public void SetValueCurrent()
+        {
+            int year = DateTime.Now.Year;
+            if (year > 2500)
+            {
+                year = year - 543;
+            }
+            txtCalendarShow.Text = DateTime.Now.Day.ToString() + " " + objDate.GetMonthName(int.Parse(DateTime.Now.Month.ToString())) + " " + year.ToString();
+        }

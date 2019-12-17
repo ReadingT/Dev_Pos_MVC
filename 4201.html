@@ -1,0 +1,297 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, width=device-width">
+    <style>
+        table {
+            border: 1px solid #666;
+            border-collapse: collapse;
+            border-spacing: 0;
+            font-family: Tahoma;
+            font-size: 14px;
+            width: 100%;
+            line-height: 25px;
+        }
+
+            table > tbody > tr > td {
+                border-top: 1px solid #666;
+                border-right: 1px solid #666;
+                border-left: 1px solid #666;
+                padding: 1px;
+            }
+
+            table > tbody > tr:first-child > td {
+                border-top: 0;
+            }
+
+            table > tbody > tr > td:first-child {
+                border-left: 0;
+            }
+
+            table > tbody > tr > td:last-child {
+                border-right: 0;
+            }
+            table > tbody > tr > td:not(.text_center):not(.text_right):not([align="center"]) {
+                padding-left:3px;
+            }
+
+            table > tbody > tr > td.text_right {
+                padding-right:3px;
+            }
+        .no-padding {
+            padding: 0 !important;
+        }
+
+        table.inner {
+            border: 0;
+        }
+
+        .bgGray {
+            background-color: #ddd;
+            font-weight: bold;
+        }
+
+        h5 {
+            margin: 15px 0;
+            font-family: Tahoma;
+            font-size: 16px;
+            font-weight: bold;
+            /*color:blue;*/
+        }
+
+        .text_center {
+            text-align: center;
+        }
+
+        .text_right {
+            text-align: right;
+        }
+
+        .no_border {
+            border: none;
+        }
+
+            .no_border td {
+                border: none;
+            }
+
+        .sign {
+            width: 150px;
+            height: 60px;
+        }
+        #content {
+            height: 1230px;
+            padding: 8px;
+        }
+
+        #footer {
+            position: absolute;
+            height: 50px;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+    <title></title>
+</head>
+<body>
+        <table>
+            <tr>
+                <td align="center" width="20%" rowspan="2">
+                    <img src="logo.png" />
+                </td>
+                <td align="center"><strong>บนทึกทึกการทดสอบ Filter Separator</strong></td>
+                <td align="center" width="20%" rowspan="2"><h1>ML3</h1></td>
+            </tr>
+            <tr>
+                <td align="center"><strong>Natural Gas Transmission</strong></td>
+            </tr>
+        </table>
+
+        <br />
+        <table>
+            <tr>
+                <td width="20%">Manufacturer:</td>
+                <td width="30%">{#Manufac}</td>
+                <td width="20%">Division/Region:</td>
+                <td width="30%">{#UnitName}</td>
+            </tr>
+            <tr>
+                <td>Model:</td>
+                <td>{#Model}</td>
+                <td>Site:</td>
+                <td>{#SiteCus}</td>
+            </tr>
+            <tr>
+                <td>S/N:</td>
+                <td>{#SN}</td>
+                <td>Date:</td>
+                <td>{#DateCall}</td>
+            </tr>
+            <tr>
+                <td>Tag No.:</td>
+                <td>{#TagNo}</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        <table class="no_border" style="width:95%;margin:0 auto;">
+            <tr>
+                <td width="45%">1. ตรวจสอบรอยรั่วตามข้อต่อของท่อ</td>
+                <td width="10%">(<input type="radio" {#is1pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is1fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">2. ตรวจสอบรอยรั่วตามข้อต่อต่างๆ</td>
+                <td width="10%">(<input type="radio" {#is1pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is1fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">3. ตรวจสอบสภาพการเป็นสนิมท่อ</td>
+                <td width="10%">(<input type="radio" {#is3pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is3fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">4. ตรวจสอบสภาพการเป็นสนิมอุปกรณ์</td>
+                <td width="10%">(<input type="radio" {#is4pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is4fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">5. ตรวจสอบสภาพการเป็นสนิดภายใน Filter Housing</td>
+                <td width="10%">(<input type="radio" {#is5pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is5fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr style="height:10px;">
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+
+        </table>
+        <table class="no_border" style="width:95%;margin:0 auto;">
+            <tr>
+                <td>6. ตรวจสอบการทำงานของ Control Valve (ถ้ามี)(Accuracy ที่ยอมรับได้ {#ControlAccuracy})</td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        <table style="width:100%">
+            <tr class="bgGray">
+                <td rowspan="2" class="text_center" style="width: 14%">DCS สั่งเปิดวาล์ว<br />(%)</td>
+                <td colspan="2" class="text_center" style="width: 43%">Before</td>
+                <td colspan="2" class="text_center" style="width: 43%">After</td>
+            </tr>
+            <tr class="bgGray">
+                <td class="text_center" style="width:21.5%">ค่า%การเปิดตัวที่วาล์ว</td>
+                <td class="text_center" style="width:21.5%">%Error</td>
+                <td class="text_center" style="width:21.5%">ค่า%การเปิดตัวที่วาล์ว</td>
+                <td class="text_center" style="width:21.5%">%Error</td>
+
+            </tr>
+            <tr>
+                <td class="text_center">0</td>
+                <td class="text_center">{#BeforePer1}</td>
+                <td class="text_center">{#BeforeError1}</td>
+                <td class="text_center">{#AfterPer1}</td>
+                <td class="text_center">{#AfterError1}</td>
+            </tr>
+            <tr>
+                <td class="text_center">25</td>
+                <td class="text_center">{#BeforePer2}</td>
+                <td class="text_center">{#BeforeError2}</td>
+                <td class="text_center">{#AfterPer2}</td>
+                <td class="text_center">{#AfterError2}</td>
+            </tr>
+            <tr>
+                <td class="text_center">50</td>
+                <td class="text_center">{#BeforePer3}</td>
+                <td class="text_center">{#BeforeError3}</td>
+                <td class="text_center">{#AfterPer3}</td>
+                <td class="text_center">{#AfterError3}</td>
+            </tr>
+            <tr>
+                <td class="text_center">75</td>
+                <td class="text_center">{#BeforePer4}</td>
+                <td class="text_center">{#BeforeError4}</td>
+                <td class="text_center">{#AfterPer4}</td>
+                <td class="text_center">{#AfterError4}</td>
+            </tr>
+            <tr>
+                <td class="text_center">100</td>
+                <td class="text_center">{#BeforePer5}</td>
+                <td class="text_center">{#BeforeError5}</td>
+                <td class="text_center">{#AfterPer5}</td>
+                <td class="text_center">{#AfterError5}</td>
+            </tr>
+            <tr>
+                <td class="text_center">75</td>
+                <td class="text_center">{#BeforePer6}</td>
+                <td class="text_center">{#BeforeError6}</td>
+                <td class="text_center">{#AfterPer6}</td>
+                <td class="text_center">{#AfterError6}</td>
+            </tr>
+            <tr>
+                <td class="text_center">50</td>
+                <td class="text_center">{#BeforePer7}</td>
+                <td class="text_center">{#BeforeError7}</td>
+                <td class="text_center">{#AfterPer7}</td>
+                <td class="text_center">{#AfterError7}</td>
+            </tr>
+            <tr>
+                <td class="text_center">25</td>
+                <td class="text_center">{#BeforePer8}</td>
+                <td class="text_center">{#BeforeError8}</td>
+                <td class="text_center">{#AfterPer8}</td>
+                <td class="text_center">{#AfterError8}</td>
+            </tr>
+            <tr>
+                <td class="text_center">0</td>
+                <td class="text_center">{#BeforePer9}</td>
+                <td class="text_center">{#BeforeError9}</td>
+                <td class="text_center">{#AfterPer9}</td>
+                <td class="text_center">{#AfterError9}</td>
+            </tr>
+        </table>
+        <br />
+        <table class="no_border" style="width:95%;margin:0 auto;">
+            <tr>
+                <td width="45%">7. ตรวจสอบการทำงานของ Shutdown Valve (ถ้ามี)</td>
+                <td width="10%"><input type="checkbox" {#isshutdown} /> มี</td>
+                <td><input type="checkbox" {#isnoshutdown} /> ไม่มี</td>
+            </tr>
+        </table>
+        <table class="no_border" style="width:80%;margin:0 auto;">
+            <tr>
+                <td width="45%">7.1 ทอสอบการปิด</td>
+                <td width="10%">(<input type="radio" {#is71pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is71fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">7.2 การ reset</td>
+                <td width="10%">(<input type="radio" {#is72pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is72fail} />) ไม่ผ่าน</td>
+            </tr>
+            <tr>
+                <td width="45%">7.3 ทอสอบการเปิด</td>
+                <td width="10%">(<input type="radio" {#is73pass} />) ผ่าน</td>
+                <td>(<input type="radio" {#is73fail} />) ไม่ผ่าน</td>
+            </tr>
+        </table>
+        <table class="no_border" style="width:95%;margin:0 auto;">
+            <tr>
+                <td width="15%">หมายเหตุ/การแก้ไข:</td>
+                <td>{#Fix}</td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td class="text_center">Tested By</td>
+                <td class="text_center">{#TestedBy}</td>
+                <td class="text_center">Accepted By</td>
+                <td class="text_center">{#AcceptedBy}</td>
+            </tr>
+        </table>
+
+</body>
+</html>
